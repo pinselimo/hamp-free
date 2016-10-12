@@ -1,6 +1,6 @@
 module Ham.HamState 
   ( HamState(..), pTime, newState, clear
-  , next, add, playing, check, shuffle, rep
+  , next, add, playing, check, setShuffle, setRepeat
   ) where
   
 import Library.LibraryTypes
@@ -19,11 +19,11 @@ data HamState = HamState {
   , getGen       :: R.StdGen
   } deriving (Show)
 
-shuffle :: Bool -> HamState -> HamState
-shuffle s state = altered $ state { getShuffle = s }
+setShuffle :: Bool -> HamState -> HamState
+setShuffle s state = altered $ state { getShuffle = s }
 
-rep :: Bool -> HamState -> HamState
-rep r state = altered $ state { getRepeat = r }  
+setRepeat :: Bool -> HamState -> HamState
+setRepeat r state = altered $ state { getRepeat = r }  
 
 pTime :: PlaybackTime -> HamState -> HamState
 pTime pt state = altered $ state { getPTime = pt }
@@ -39,36 +39,31 @@ clear state = altered $ state { getTracks = [], prevTracks = [] }
 
 next :: HamState -> (Track, HamState)
 next state = case getTracks state of
-  (t:ts) -> if  getRepeat state
-              
-            then case ts of
-              
-         [] -> (t, altered $ state { getTracks  = prevTracks state
-                                   , prevTracks = t : [] } ) 
-    
-         _  -> if getShuffle state
-                           
-               then case shuffler (getGen state) (t:ts) of
+    -- when the last song comes up, we check if we have to repeat
+    (t:[])  ->  if getRepeat state 
+                
+                then (t,altered $ state { getTracks  = prevTracks state ++ [t]
+                                        , prevTracks = [] } )
+                
+                else (t,altered $ state { getTracks  = []
+                                        , prevTracks = t : prevTracks state } )
+
+    tracks@(t:ts) -> if getShuffle state
+                     
+                     then case shuffle (getGen state) tracks of
        
                      (g', t', ts') -> (t', altered $ 
                                            state { getTracks   = ts'   
                                                  , prevTracks  = t': prevTracks state 
                                                  , getGen      = g' } )
-                                                 
-               else (t, altered $ state { getTracks  = ts
-                                        , prevTracks = t: prevTracks state } )
-              
-            else (t, altered $ state { getTracks  = ts
-                                     , prevTracks = [] } )
-  _      -> if getRepeat state 
-            then case prevTracks of
-                 (x:xs) -> 
-                 _      -> ("",state)
-            else ("",state)
-    
-
-shuffler :: (R.RandomGen g, Eq a) => g -> [a] -> (g,a,[a])
-shuffler g ts = (g', t, ts')
+                     
+                     else (t, altered $ state { getTracks  = ts
+                                              , prevTracks = t : prevTracks state } )
+    -- getTracks returns an empty list              
+    _ -> ("",state)
+             
+shuffle :: (R.RandomGen g, Eq a) => g -> [a] -> (g,a,[a])
+shuffle g ts = (g', t, ts')
                         
                  where step   = space / (fromIntegral $ length ts)
                        space  = case R.genRange g of

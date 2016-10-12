@@ -8,7 +8,8 @@ import Mpg.MpgCommands (getFrames, frames, JMode(..))
 import qualified Mpg.MpgCommands as Mpg (MpgCommand(Jump,Load))
 
 import Ham.HamState    (HamState(getState, stateChanged, getPTime)
-                       , next, add, playing, check, shuffle, rep, clear)
+                       , next, add, playing, check, setShuffle
+                       , setRepeat, clear)
 import Ham.HamMessages (HamMessage(..), Msg(serialize))
 import Ham.HamCommands (HamCommand(..), hamToMpg, argsToTrack, jsonToCmd)
 import qualified Ham.HamCommands as Ham (HamCommand(getArtist,getAlbum,getTrack))
@@ -91,9 +92,9 @@ react lib hCmd hDev stateVar (Just cmd) = case hamToMpg lib cmd of
             Nothing      -> return ()
         
         -- Ham Commands
-        ToggleRepeat  b  -> takeMVar stateVar >>= putMVar stateVar . rep b
+        ToggleRepeat  b  -> takeMVar stateVar >>= putMVar stateVar . setRepeat b
         
-        ToggleShuffle b  -> takeMVar stateVar >>= putMVar stateVar . shuffle b
+        ToggleShuffle b  -> takeMVar stateVar >>= putMVar stateVar . setShuffle b
         
         RefreshLib       -> return ()
         
