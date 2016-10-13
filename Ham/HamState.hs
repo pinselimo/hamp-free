@@ -56,8 +56,11 @@ next state = case getTracks state of
     -- getTracks returns an empty list              
     _            -> if getRepeat state 
                 
-                    then (t,altered $ state { getTracks  = prevTracks state
-                                            , prevTracks = [] } )
+                    then case prevTracks state of
+                    
+                    (t:ts) -> (t, altered $ state { getTracks  = ts
+                                                  , prevTracks = [] } )
+                    _      -> ("",state)
                 
                     else ("",state)
                 
