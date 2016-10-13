@@ -39,15 +39,9 @@ clear state = altered $ state { getTracks = [], prevTracks = [] }
 
 next :: HamState -> (Track, HamState)
 next state = case getTracks state of
-    -- when the last song comes up, we check if we have to repeat
-    (t:[])  ->  if getRepeat state 
-                
-                then (t,altered $ state { getTracks  = prevTracks state ++ [t]
-                                        , prevTracks = [] } )
-                
-                else (t,altered $ state { getTracks  = []
-                                        , prevTracks = t : prevTracks state } )
-
+    
+    -- as long as the tracklist contains > 1 song
+    -- , we need to check if we have to shuffle
     tracks@(t:ts) -> if getShuffle state
                      
                      then case shuffle (getGen state) tracks of
@@ -60,16 +54,21 @@ next state = case getTracks state of
                      else (t, altered $ state { getTracks  = ts
                                               , prevTracks = t : prevTracks state } )
     -- getTracks returns an empty list              
-    _ -> ("",state)
-             
+    _            -> if getRepeat state 
+                
+                    then (t,altered $ state { getTracks  = prevTracks state
+                                            , prevTracks = [] } )
+                
+                    else ("",state)
+                
 shuffle :: (R.RandomGen g, Eq a) => g -> [a] -> (g,a,[a])
 shuffle g ts = (g', t, ts')
                         
-                 where step   = space / (fromIntegral $ length ts)
-                       space  = case R.genRange g of
-                           (x, y) -> fromIntegral (y - x)
-                       t   = (ts!!) $ floor (fromIntegral rv / step)
-                       ts' = filter (/=t) ts
+                 where step    = space / (fromIntegral $ length ts)
+                       space   = case R.genRange g of
+                                     (x, y) -> fromIntegral (y - x)
+                       t       = (ts!!) $ floor (fromIntegral rv / step)
+                       ts'     = filter (/=t) ts
                        (rv,g') = R.next g
                        
 playing :: String -> HamState -> HamState
