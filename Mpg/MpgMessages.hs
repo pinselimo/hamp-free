@@ -73,7 +73,7 @@ readMp3Info s = MP (fromIntegral $ round $ read a)
                    (read j)
                    (read k)
                    (read l)
-              where (a:b:c:d:e:f:g:h:i:j:k:l:_) = words s
+             where (a:b:c:d:e:f:g:h:i:j:k:l:_) = words s
 
 readPlaybackTime :: String -> PlaybackTime
 readPlaybackTime s = PT (frames $ read cF) (frames $ read rF) 

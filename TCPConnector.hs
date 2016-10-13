@@ -14,12 +14,10 @@ acceptRemotes :: MVar [Handle] -> Int -> IO ()
 acceptRemotes var port = do
         sock <- listenOn (PortNumber $ fromIntegral port)
         finally (forever $ do 
-        
         --accept blocks, so we don't need delay
-        (hand,ip,port) <- accept sock
-        putStrLn $ "Connected to: " ++ ip ++ ':':(show port)
-        
-        refreshHandles var hand) (sClose sock)
+            (hand,ip,port) <- accept sock
+            putStrLn $ "Connected to: " ++ ip ++ ':':(show port)
+            refreshHandles var hand) (sClose sock)
         
         
 refreshHandles :: MVar [Handle] -> Handle -> IO ()

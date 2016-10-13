@@ -40,13 +40,13 @@ main = do
     handleVar <- newMVar []
     stateVar  <- newMVar $ HamState Ended "" initPT False False [] [] False gen
                        
-    
-    t1 <- forkOS $ makeDiscoverable (fromInteger 13636)-- ::PortNumber 
+    --remote discovery thread
+    t1 <- forkOS $ makeDiscoverable (fromInteger 13636)
                                     (== "<discover>HamP3</discover>")
                                     ("<discoverResponse>HamP3</discoverResponse>")
     
     --accepting remote thread
-    t2 <- forkOS $ acceptRemotes handleVar 16363 -- ::PortID
+    t2 <- forkOS $ acceptRemotes handleVar 16363
        
     --remote input and control thread
     t3 <- forkOS $ handleCmds library hCmd handleVar stateVar
@@ -65,18 +65,12 @@ main = do
         Just handles <- tryTakeMVar handleVar
         mapM hClose ([hCmd, hMsg, hErr] ++ handles)
         
-    where hndlr :: SomeException -> IO ()
-          hndlr _ = return ()
-          initPT :: PlaybackTime
+    where initPT :: PlaybackTime
           initPT = PT f f s s
           f = frames  0
           s = seconds 0
-          
-          
-processCommand :: String -> Handle -> IO ()
-processCommand cmd h = undefined
     
-handleErr :: String -> IO ()
+handleErr :: SomeException -> IO ()
 handleErr _ = return ()
         
 parseArgs :: FileIO m => [String] -> m FilePath

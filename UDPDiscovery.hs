@@ -11,19 +11,19 @@ import System.Timeout (timeout)
 
 makeDiscoverable :: PortNumber -> (String -> Bool) -> String -> IO ()
 makeDiscoverable port isKey response = do
-    putStrLn "Discoverable.."
+    
     sock  <- socket AF_INET Datagram defaultProtocol
     bcast <- getHostByName broadcast
     
     bind sock (SockAddrInet port $ hostAddress bcast)
     
-    finally (listen sock isKey response) $ close sock
+    finally (putStrLn "Discoverable.." >> listen sock isKey response) $ close sock
 
 listen :: Socket -> (String -> Bool) -> String -> IO ()
 listen s isKey response = do
      (dat, _, ip) <- recvFrom s 1024
      if isKey dat
-            then sendTo s response ip >> putStrLn ("Welcome " ++ show ip)
+            then sendTo s response ip -- >> putStrLn ("Welcome " ++ show ip)
                   >> listen s isKey response
             else listen s isKey response
     

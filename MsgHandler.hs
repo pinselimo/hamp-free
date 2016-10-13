@@ -52,5 +52,5 @@ encodingErrors :: Handle -> IOException -> IO String
 encodingErrors h e = Data.ByteString.Char8.hGetLine h
                   >> return ""
 
---TODO implement error handling
+--TODO implement Mpg error handling
 err _ = threadDelay (1000*1000) >> return ()
