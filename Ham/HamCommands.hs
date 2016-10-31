@@ -81,7 +81,7 @@ hamToMpg l cmd = case cmd of
 argsToTrack :: Library -> Artist -> Maybe Album -> Maybe Track -> Maybe [FilePath]
 argsToTrack l artist mAlbum mTrack = case mTrack of
 
-    Just track -> fmap (:[]) $ findTrack l artist track
+    Just track -> (:[]) <$> findTrack l artist track
 
     Nothing    -> case mAlbum of
     

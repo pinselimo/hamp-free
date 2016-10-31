@@ -22,7 +22,7 @@ import Library.MusicLibrary (Library, getArtists,
 
 import Data.Maybe (maybeToList)
 
-import Control.Monad (forever, forM_, filterM)
+import Control.Monad (forever, forM_, filterM, when, unless)
 import Control.Concurrent.MVar (readMVar, MVar, takeMVar, putMVar)
 import Control.Concurrent (threadDelay)
 import Control.Exception (handle, IOException)
@@ -48,10 +48,11 @@ handleCmds lib hCmd handleVar stateVar = forever $ do
                  checkState hDev stateVar
                 
                  online <- hIsOnline hDev
-                 if not online
-                 then return ()
-                
-                 else timeout 2000 (hGetCommandIO hDev) >>= \x ->
+                 
+                 when online $
+                 
+                    timeout 2000 (hGetCommandIO hDev) >>= \x ->
+                   
                       case x of
                         Just s  -> putStrLn ("Received: " ++ s) >>
                                    react lib hCmd hDev stateVar (parseCmd s)
@@ -61,7 +62,7 @@ hIsOnline :: Handle -> IO Bool
 hIsOnline h = handle false $ hReady h >> return True
     where false :: IOException -> IO Bool
           false e | isEOFError e = return False
-                  | otherwise   = return True
+                  | otherwise    = return True
 
 parseCmd :: String -> Maybe HamCommand
 parseCmd s = case parseJSON s of
@@ -72,7 +73,7 @@ react :: Library -> Handle -> Handle -> MVar HamState -> Maybe HamCommand -> IO 
 react lib hCmd hDev stateVar Nothing    = return ()
 react lib hCmd hDev stateVar (Just cmd) = case hamToMpg lib cmd of
     
-    Just x  -> (sendCmd hCmd $ show x)
+    Just x  -> sendCmd hCmd $ show x
     
     _       -> case cmd of
     
@@ -142,7 +143,7 @@ jump pt fwd secs
 play :: String -> Handle -> MVar HamState -> IO ()
 play track hCmd stateVar = takeMVar stateVar
                        >>= putMVar  stateVar . playing track
-                       >>  (sendCmd  hCmd $ show $ Mpg.Load track)
+                       >>  sendCmd  hCmd (show $ Mpg.Load track)
 
 
 playNext :: Handle -> MVar HamState -> IO ()
@@ -159,7 +160,6 @@ playNext hCmd m = readMVar m >>= \s ->
 
 checkState :: Handle -> MVar HamState -> IO ()
 checkState hDev m = readMVar m >>= \s ->
-    if stateChanged s then (send hDev $ State s) 
+    when (stateChanged s) $ send hDev (State s)
                             >> takeMVar m 
                             >> putMVar m (check s)
-                      else return ()

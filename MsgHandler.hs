@@ -8,7 +8,7 @@ import Mpg.MpgMessages (Message(..), readMsg, PlaybackState(..),
 import Mpg.MpgCommands (MpgCommand(Load,Pause))
 
 import Control.Exception (handle, SomeException, IOException)
-import Control.Monad (forever)
+import Control.Monad (forever, void, when)
 import Control.Concurrent.MVar (takeMVar, putMVar, MVar, readMVar)
 import Control.Concurrent (threadDelay)
 
@@ -33,11 +33,9 @@ handleErrs hErr stateVar = forever $ handle ignored $
              case readMsg line of 
                             
                             Just (F pt)  -> readMVar stateVar >>= \state ->
-                                if (currentTime $ getPTime state) < (currentTime pt) 
-                                then takeMVar stateVar >>= 
-                                     (putMVar stateVar) . (pTime pt)
-                                     
-                                else return ()
+                                when (currentTime (getPTime state) < currentTime pt)
+                                   $ takeMVar stateVar >>= 
+                                     putMVar stateVar . pTime pt
                                 
                             Just (E or) ->  err or
                             
@@ -46,11 +44,11 @@ handleErrs hErr stateVar = forever $ handle ignored $
                         -- >> threadDelay 1000
                         
 ignored :: SomeException -> IO ()
-ignored _ = threadDelay (1000*1000) >> return ()
+ignored _ = void $ threadDelay (1000*1000)
 
 encodingErrors :: Handle -> IOException -> IO String
 encodingErrors h e = Data.ByteString.Char8.hGetLine h
                   >> return ""
 
 --TODO implement Mpg error handling
-err _ = threadDelay (1000*1000) >> return ()
+err _ = void $ threadDelay (1000*1000)

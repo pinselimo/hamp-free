@@ -1,5 +1,5 @@
 module Ham.HamState 
-  ( HamState(..), pTime, newState, clear
+  ( HamState(..), pTime, newState, clear, getTrack
   , next, add, playing, check, setShuffle, setRepeat
   ) where
   
@@ -9,7 +9,6 @@ import qualified System.Random as R (RandomGen, next, genRange, StdGen)
 
 data HamState = HamState {
     getState   :: PlaybackState
-  , getTrack   :: String
   , getPTime   :: PlaybackTime
   , getRepeat  :: Bool
   , getShuffle :: Bool
@@ -47,12 +46,10 @@ next state = case getTracks state of
                      then case shuffle (getGen state) tracks of
        
                      (g', t', ts') -> (t', altered $ 
-                                           state { getTracks   = ts'   
-                                                 , prevTracks  = t': prevTracks state 
+                                           state { getTracks   = ts'    
                                                  , getGen      = g' } )
                      
-                     else (t, altered $ state { getTracks  = ts
-                                              , prevTracks = t : prevTracks state } )
+                     else (t, altered $ state { getTracks  = ts } )
     -- getTracks returns an empty list              
     _            -> if getRepeat state 
                 
@@ -67,7 +64,7 @@ next state = case getTracks state of
 shuffle :: (R.RandomGen g, Eq a) => g -> [a] -> (g,a,[a])
 shuffle g ts = (g', t, ts')
                         
-                 where step    = space / (fromIntegral $ length ts)
+                 where step    = space / fromIntegral (length ts)
                        space   = case R.genRange g of
                                      (x, y) -> fromIntegral (y - x)
                        t       = (ts!!) $ floor (fromIntegral rv / step)
@@ -76,10 +73,16 @@ shuffle g ts = (g', t, ts')
                        
 playing :: String -> HamState -> HamState
 playing track state = altered $ state { getState = Playing
-                                      , getTrack = track }
+                                      , prevTracks = track : prevTracks state }
                                         
 altered :: HamState -> HamState
 altered s = s { stateChanged = True }
 
 check :: HamState -> HamState
 check s = s  { stateChanged = False }
+
+getTrack :: HamState -> Track
+getTrack st  = track
+ where track = case take 1 $ prevTracks st of
+               (t:_)   -> t
+               _       -> ""

@@ -10,7 +10,8 @@ import Library.LibraryTypes
 import qualified Data.Map.Lazy as M
 import System.FilePath ((</>))
 import Data.Foldable (find)
-import Control.Monad (liftM, mapM, filterM)
+import Control.Monad (mapM, filterM)
+import Control.Applicative ((<$>))
 import Data.List (isInfixOf, isSuffixOf)
 import Control.Arrow (first, second)
 
@@ -18,18 +19,18 @@ import Control.Arrow (first, second)
 -------- IO ---------
 
 getLibrary :: FileIO m => FilePath -> m Library
-getLibrary = liftM (loadLib . cleanLibList) . getLibList
+getLibrary = fmap (loadLib . cleanLibList) . getLibList
 
 getLibList :: FileIO m => FilePath -> m [(Artist,[(Album,Tracklist)])]
-getLibList p = f'   p        >>= mapM (\x -> liftM ((,) x) $ 
-               f'  (p </> x) >>= mapM (\y -> liftM ((,) y) $
+getLibList p = f'   p        >>= mapM (\x -> fmap ((,) x) $ 
+               f'  (p </> x) >>= mapM (\y -> fmap ((,) y) $
                f'' (p </> x </> y) ) )
               where f   :: FileIO m => FilePath -> m [FilePath]
-                    f       = liftM clean . getDirectoryContents
+                    f       = fmap clean . getDirectoryContents
                     f'  :: FileIO m => FilePath -> m [FilePath]
                     f' pat  = f pat >>= filterM (doesDirectoryExist . (pat</>))
                     f'' :: FileIO m => FilePath -> m [FilePath]
-                    f''     = liftM clean' . f            
+                    f''     = fmap clean' . f            
                     clean   = filter (`notElem` [".",".."])
                     clean'  = filter (".mp3" `isSuffixOf`) . clean
 
@@ -50,7 +51,7 @@ cleanLibList = g . map (second g)
 
 getArtistTracks :: Library -> Artist -> Maybe [FilePath]
 getArtistTracks l a = getAlbums l a >>= \albums -> 
-    liftM concat (mapM (getAlbumTracks l a) albums)
+    concat <$> mapM (getAlbumTracks l a) albums
     
 getAlbumTracks :: Library -> Artist -> Album -> Maybe [FilePath]
 getAlbumTracks l art alb = getTracklist l art alb >>=
@@ -60,7 +61,7 @@ getArtists :: Library -> [Artist]
 getArtists (Lib l) = M.keys l
 
 getAlbums :: Library -> Artist -> Maybe [Album]
-getAlbums (Lib l) art = liftM (map fst) $ M.lookup art l
+getAlbums (Lib l) art = map fst <$> M.lookup art l
 
 getTracklist :: Library -> Artist -> Album -> Maybe Tracklist
 getTracklist (Lib l) art alb = M.lookup art l >>= lookup alb
@@ -73,7 +74,7 @@ getTrackName (Lib lib) (art, alm, trk) = M.lookup art lib >>=
                                             alm     </> trk)
 
 findTrack :: Library -> Artist -> Track -> Maybe FilePath
-findTrack (Lib lib) art trk = liftM (assembleName art trk) $
+findTrack (Lib lib) art trk = fmap (assembleName art trk) $
                         M.lookup art lib >>= findTrack' trk
           where findTrack' :: Track -> [(Album,Tracklist)] -> Maybe Album
                 findTrack' tk ((a,ts):as) | tk `isIn` ts = Just a

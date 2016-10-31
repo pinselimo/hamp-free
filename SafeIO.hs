@@ -10,7 +10,9 @@ module SafeIO (
 import Data.Word (Word8)
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.List (isPrefixOf)
+import Data.Maybe (fromMaybe)
 import Control.Exception (handle, IOException)
+import Control.Monad (unless)
 import Control.Applicative (pure, (<$>))
 import qualified Data.ByteString.Lazy as L
 import System.IO.Error (isEOFError)
@@ -49,8 +51,8 @@ class Monad m => BlueIO m where
     
     sendAllRFCOMM :: Socket -> L.ByteString -> m ()
     sendAllRFCOMM s bs = sendRFCOMM s bs >>= \i ->
-                       if fromIntegral i == L.length bs then return ()
-                       else sendAllRFCOMM s $ L.drop (fromIntegral i) bs
+                       unless (fromIntegral i == L.length bs)
+                              (sendAllRFCOMM s $ L.drop (fromIntegral i) bs)
 
 class Monad m => ProcIO h m | m -> h where
     findMPG321 :: m (Maybe FilePath)
@@ -91,13 +93,13 @@ instance BlueIO Maybe where
     deviceName = Just . pack
 
     openRFCOMM dev c = Just ["a","b","c","d","e"]
-    recvRFCOMM sock i = Just $ pack $ (head sock) 
+    recvRFCOMM sock i = Just $ pack $ head sock
     sendRFCOMM sock s = Just $ fromIntegral $ L.length s
     closeRFCOMM sock = Nothing
 
 isLocalIP :: String -> Bool
 isLocalIP s =  "192.168." `isPrefixOf` s
-            || "10."    `isPrefixOf` s
+            || "10."      `isPrefixOf` s
             ||  foldr (\c b -> c `isPrefixOf` s || b) False loc
             where loc = map (\n -> "172."++show n++".") [16..31]
 
@@ -108,12 +110,11 @@ hGetCommandIO h = handle onError $ System.IO.hGetChar h >>= \c ->
                 where onError :: IOException -> IO String
                       onError e | isEOFError e = return "}"
                                 | otherwise    = hGetCommandIO h
-                
-main :: BlueIO m => m String
-main = do
+               
+blue :: BlueIO m => m String
+blue = do
     adp <- defaultAdapter
-    let a = case adp of Just a   -> a
-                        Nothing  -> "No adp"
+    let a = fromMaybe "No adp" adp
     (x:xs) <- discover a
     sock   <- openRFCOMM 1 x
     return x

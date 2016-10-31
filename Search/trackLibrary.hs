@@ -1,4 +1,4 @@
-module Search.TrackLibrary
+module Search.TrackLibrary where
     
 
 
@@ -28,7 +28,7 @@ getTrList p = liftM (concat . concat) $
                    f'  :: FileIO m => FilePath -> m [FilePath]
                    f' pat  = f pat >>= filterM (doesDirectoryExist . (pat</>))
                    f'' :: FileIO m => FilePath -> m [FilePath]
-                   f''     = liftM clean' . f   
+                   f''     = fmap clean' . f   
                    g   :: Artist -> Album -> Track -> (Track,TrackInfo)
                    g a b t = (t,TrackInfo a b)  
                    clean   = filter (`notElem` [".",".."])

@@ -81,7 +81,7 @@ readPlaybackTime s = PT (frames $ read cF) (frames $ read rF)
                    where (cF:rF:cT:rT:_) = words s
          
 minutes :: Float -> Minutes
-minutes f | frac > 0.59 = minutes $ (fromIntegral int)+1 + frac-0.6
+minutes f | frac > 0.59 = minutes $ fromIntegral int +1 + frac-0.6
           | otherwise   = Mins f
           where (int,frac) = properFraction f
        

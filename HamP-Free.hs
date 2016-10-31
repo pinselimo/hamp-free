@@ -12,17 +12,16 @@ import UDPDiscovery (makeDiscoverable)
 import TCPConnector (acceptRemotes)
 import MsgHandler (handleMsgs, handleErrs)
 
-import Control.Monad (mzero, liftM, mapM, filterM, forM, forever)
-import Control.Exception (handle, SomeException, finally)
-import Control.Concurrent (forkOS, killThread, threadDelay)
+import Control.Exception (SomeException, finally)
+import Control.Concurrent (forkOS, killThread)
 import Control.Concurrent.MVar (newMVar, tryTakeMVar)
 
 import System.Environment (getArgs, withArgs)
-import System.FilePath ((</>), splitFileName)
+import System.FilePath ((</>))
 import System.Process (StdStream(CreatePipe), 
        std_in, std_out, std_err, cwd, waitForProcess)
 import System.IO (hGetContents, hSetBuffering, BufferMode(LineBuffering)
-                   , hGetLine, hIsClosed)
+                 ,hGetLine, hIsClosed)
 import System.Timeout (timeout)
 import System.Random (getStdGen)
 
@@ -38,12 +37,12 @@ main = do
     gen <- getStdGen --TODO maybe use own Gen
     
     handleVar <- newMVar []
-    stateVar  <- newMVar $ HamState Ended "" initPT False False [] [] False gen
+    stateVar  <- newMVar $ HamState Ended initPT False False [] [] False gen
                        
     --remote discovery thread
-    t1 <- forkOS $ makeDiscoverable (fromInteger 13636)
+    t1 <- forkOS $ makeDiscoverable 13636
                                     (== "<discover>HamP3</discover>")
-                                    ("<discoverResponse>HamP3</discoverResponse>")
+                                    "<discoverResponse>HamP3</discoverResponse>"
     
     --accepting remote thread
     t2 <- forkOS $ acceptRemotes handleVar 16363
@@ -58,12 +57,12 @@ main = do
     t5 <- forkOS $ handleErrs hErr stateVar
     
     --Quit safely
-    finally (waitForProcess hProc >>= putStrLn . show) $ do
+    finally (waitForProcess hProc >>= print) $ do
         
-        mapM killThread [t1,t2,t3,t4,t5]
+        mapM_ killThread [t1,t2,t3,t4,t5]
         
         Just handles <- tryTakeMVar handleVar
-        mapM hClose ([hCmd, hMsg, hErr] ++ handles)
+        mapM_ hClose ([hCmd, hMsg, hErr] ++ handles)
         
     where initPT :: PlaybackTime
           initPT = PT f f s s

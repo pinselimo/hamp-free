@@ -3,7 +3,7 @@ module Ham.HamMessages
     where
     
 import Library.LibraryTypes
-import Ham.HamState (HamState(..))
+import Ham.HamState (HamState(..), getTrack)
 import Mpg.MpgMessages (PlaybackState, PlaybackTime(..), Seconds(getTime))
 import Util.JSON (JData(..))
 
