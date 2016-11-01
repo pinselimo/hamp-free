@@ -1,7 +1,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module SafeIO ( 
        BlueIO(..), Channel, Socket, Device
-     , FileIO(..)
+     , ReadFileIO(..)
+     , WriteFileIO(..)
      , MesgIO(..), hGetCommandIO
      , ProcIO(..), System.Process.proc, System.Process.ProcessHandle
                  , System.IO.Handle,
@@ -19,16 +20,21 @@ import System.IO.Error (isEOFError)
 import qualified System.IO (hClose, hPutStr, hFlush, 
                             hPutStrLn, hGetChar, Handle)
 import qualified System.Directory (getDirectoryContents, doesDirectoryExist
-                        ,getCurrentDirectory, findExecutable)
+                        ,getCurrentDirectory, findExecutable, doesFileExist)
                         
 
 import qualified System.Process (createProcess, proc, 
                                 ProcessHandle, CreateProcess)
      
-class Monad m => FileIO m where
+class Monad m => ReadFileIO m where
     doesDirectoryExist :: FilePath -> m Bool
+    doesFileExist :: FilePath -> m Bool
     getDirectoryContents :: FilePath -> m [FilePath]
     getCurrentDirectory :: m FilePath
+    readFile :: FilePath -> m String
+
+class Monad m => WriteFileIO m where
+    writeFile :: FilePath -> String -> m ()
 
 class Monad m => MesgIO h m | m -> h where
     hPutStr :: h -> String -> m ()
@@ -68,10 +74,15 @@ type Device = String
 type Adapter = String
 type Socket = [String]
 
-instance FileIO IO where
+instance ReadFileIO IO where
     doesDirectoryExist = System.Directory.doesDirectoryExist
+    doesFileExist = System.Directory.doesFileExist
     getDirectoryContents = System.Directory.getDirectoryContents
     getCurrentDirectory = System.Directory.getCurrentDirectory
+    readFile = Prelude.readFile
+    
+instance WriteFileIO IO where
+    writeFile = Prelude.writeFile
 
 instance MesgIO System.IO.Handle IO where
     hPutStr = System.IO.hPutStr

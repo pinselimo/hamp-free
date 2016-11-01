@@ -4,7 +4,7 @@ module Library.MusicLibrary
     findTrack, getAlbums, getTracklist)
     where
     
-import SafeIO (FileIO, getDirectoryContents, doesDirectoryExist)
+import SafeIO (ReadFileIO, getDirectoryContents, doesDirectoryExist)
 import Library.LibraryTypes
     
 import qualified Data.Map.Lazy as M
@@ -18,18 +18,18 @@ import Control.Arrow (first, second)
 
 -------- IO ---------
 
-getLibrary :: FileIO m => FilePath -> m Library
+getLibrary :: ReadFileIO m => FilePath -> m Library
 getLibrary = fmap (loadLib . cleanLibList) . getLibList
 
-getLibList :: FileIO m => FilePath -> m [(Artist,[(Album,Tracklist)])]
+getLibList :: ReadFileIO m => FilePath -> m [(Artist,[(Album,Tracklist)])]
 getLibList p = f'   p        >>= mapM (\x -> fmap ((,) x) $ 
                f'  (p </> x) >>= mapM (\y -> fmap ((,) y) $
                f'' (p </> x </> y) ) )
-              where f   :: FileIO m => FilePath -> m [FilePath]
+              where f   :: ReadFileIO m => FilePath -> m [FilePath]
                     f       = fmap clean . getDirectoryContents
-                    f'  :: FileIO m => FilePath -> m [FilePath]
+                    f'  :: ReadFileIO m => FilePath -> m [FilePath]
                     f' pat  = f pat >>= filterM (doesDirectoryExist . (pat</>))
-                    f'' :: FileIO m => FilePath -> m [FilePath]
+                    f'' :: ReadFileIO m => FilePath -> m [FilePath]
                     f''     = fmap clean' . f            
                     clean   = filter (`notElem` [".",".."])
                     clean'  = filter (".mp3" `isSuffixOf`) . clean

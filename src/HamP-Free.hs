@@ -2,7 +2,8 @@
 module Main where
 
 import Library.MusicLibrary (getLibrary, findTrack)
-import SafeIO (FileIO(..), ProcIO(..), proc, Handle, ProcessHandle, hClose)
+import SafeIO (ReadFileIO(..), ProcIO(..), proc
+              ,WriteFileIO(..), Handle, ProcessHandle, hClose)
 import Mpg.MpgCommands (frames, MpgCommand(Load))
 import Mpg.MpgMessages (PlaybackTime(PT), seconds, PlaybackState(Ended))
 import Ham.HamState (HamState(..))
@@ -23,7 +24,7 @@ import System.Process (StdStream(CreatePipe),
 import System.IO (hGetContents, hSetBuffering, BufferMode(LineBuffering)
                  ,hGetLine, hIsClosed)
 import System.Timeout (timeout)
-import System.Random (getStdGen)
+import System.Random (getStdGen, next)
 
 
 main :: IO ()
@@ -34,17 +35,21 @@ main = do
     
     (Just hCmd,Just hMsg,Just hErr, hProc) <- startPlayer dir
     
-    gen <- getStdGen --TODO maybe use own Gen
+    gain <- setupGain
+    
+    gen <- getStdGen
     
     handleVar <- newMVar []
     stateVar  <- newMVar $ HamState Ended initPT False False [] [] False gen
+    
+    let (identifier, _) = next gen --TODO devices also need human readable names
                        
-    --remote discovery thread
+    --remote discovery thread TODO random number for distinct devices
     t1 <- forkOS $ makeDiscoverable 13636
                                     (== "<discover>HamP3</discover>")
                                     "<discoverResponse>HamP3</discoverResponse>"
     
-    --accepting remote thread
+    --accepting remote thread TODO same random number
     t2 <- forkOS $ acceptRemotes handleVar 16363
        
     --remote input and control thread
@@ -71,8 +76,16 @@ main = do
     
 handleErr :: SomeException -> IO ()
 handleErr _ = return ()
+
+setupGain :: (WriteFileIO m, ReadFileIO m) => m Int
+setupGain = doesFileExist f >>= \exists ->
+    if exists 
+    then SafeIO.readFile f >>= \fc -> return $ read fc
+    else SafeIO.writeFile f "50" >> return 50
+          
+          where f = ".gain"
         
-parseArgs :: FileIO m => [String] -> m FilePath
+parseArgs :: ReadFileIO m => [String] -> m FilePath
 parseArgs ("-c":_) = getCurrentDirectory
 parseArgs (f@(c:cs):fs) | c == '/'  = doesDirectoryExist f >>=
                                      \b -> if b then return f else parseArgs fs
@@ -84,7 +97,8 @@ parseArgs (f@(c:cs):fs) | c == '/'  = doesDirectoryExist f >>=
                                                      else parseArgs fs
 parseArgs _        = fail "No directory found"
 
-startPlayer :: ProcIO h m => FilePath -> m (Maybe h, Maybe h, Maybe h, ProcessHandle)
+startPlayer :: ProcIO h m => FilePath -> 
+                             m (Maybe h, Maybe h, Maybe h, ProcessHandle)
 startPlayer fp = findMPG321 >>= \m -> 
                case m of 
                  Nothing -> findMPG123
