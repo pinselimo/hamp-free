@@ -24,9 +24,9 @@ To then start HamP-Free just run:
 $ cabal v2-run HamP-Free -- [args]
 ~~~
 
-The only argument taken is the filepath to the music library:
-```-c``` takes the current path
-```Folder``` accesses current path + Folder
+The only argument taken is the filepath to the music library: \
+```-c``` takes the current path \
+```Folder``` accesses current path + Folder \
 ```/total-path``` accesses total path
 
 Music library should be organised in a structure like:
