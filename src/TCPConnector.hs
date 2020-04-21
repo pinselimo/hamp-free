@@ -23,18 +23,26 @@ import Control.Exception (finally, handle, SomeException)
 import Control.Monad (forever, filterM)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.MVar (MVar, takeMVar, putMVar)
-import Network (listenOn, accept, sClose, PortID(PortNumber))
+import Network.Socket (listen, accept, close, bind, socket, defaultHints, getAddrInfo, socketToHandle,
+        AddrInfoFlag(AI_NUMERICHOST, AI_NUMERICSERV), SocketType(Stream),
+        addrFlags, addrSocketType, addrFamily, addrSocketType, addrProtocol, addrAddress)
 import System.IO (hGetContents, hSetBuffering, BufferMode(LineBuffering)
-                   , hGetLine, hIsClosed, hReady, Handle)
-                    
+                   , hGetLine, hIsClosed, hReady, Handle, IOMode(ReadWriteMode))
+
 acceptRemotes :: MVar [Handle] -> Int -> IO ()
 acceptRemotes var port = do
-        sock <- listenOn (PortNumber $ fromIntegral port)
+        let hints = defaultHints { addrFlags = [AI_NUMERICHOST, AI_NUMERICSERV], addrSocketType = Stream }
+        addr:_ <- getAddrInfo (Just hints) (Just "127.0.0.1") (Just $ show port)
+        sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+        Network.Socket.bind sock (addrAddress addr)
+        Network.Socket.listen sock 1
         finally (forever $ do 
         --accept blocks, so we don't need delay
-            (hand,ip,port) <- accept sock
-            putStrLn $ "Connected to: " ++ ip ++ ':': show port
-            refreshHandles var hand) (sClose sock)
+            (socket', addr) <- Network.Socket.accept sock
+            hand <- socketToHandle socket' ReadWriteMode
+            close socket'
+            putStrLn $ "Connected to: " ++ (show addr)
+            refreshHandles var hand) (close sock)
         
         
 refreshHandles :: MVar [Handle] -> Handle -> IO ()

@@ -38,8 +38,6 @@ import qualified System.IO (hClose, hPutStr, hFlush,
                             hPutStrLn, hGetChar, Handle)
 import qualified System.Directory (getDirectoryContents, doesDirectoryExist
                         ,getCurrentDirectory, findExecutable, doesFileExist)
-                        
-
 import qualified System.Process (createProcess, proc, 
                                 ProcessHandle, CreateProcess)
      
@@ -139,7 +137,7 @@ hGetCommandIO h = handle onError $ System.IO.hGetChar h >>= \c ->
                       onError e | isEOFError e = return "}"
                                 | otherwise    = hGetCommandIO h
                
-blue :: BlueIO m => m String
+blue :: (BlueIO m, MonadFail m) => m String
 blue = do
     adp <- defaultAdapter
     let a = fromMaybe "No adp" adp

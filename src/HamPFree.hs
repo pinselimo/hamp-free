@@ -16,19 +16,7 @@
 --
 
 -- home player main file
-module Main where
-
-import Library.MusicLibrary (getLibrary, findTrack)
-import SafeIO (ReadFileIO(..), ProcIO(..), proc
-              ,WriteFileIO(..), Handle, ProcessHandle, hClose)
-import Mpg.MpgCommands (frames, MpgCommand(Load))
-import Mpg.MpgMessages (PlaybackTime(PT), seconds, PlaybackState(Ended))
-import Ham.HamState (HamState(..))
-
-import CmdHandler (handleCmds)
-import UDPDiscovery (makeDiscoverable)
-import TCPConnector (acceptRemotes)
-import MsgHandler (handleMsgs, handleErrs)
+module HamPFree (execService) where
 
 import Control.Exception (SomeException, finally)
 import Control.Concurrent (forkOS, killThread)
@@ -43,9 +31,19 @@ import System.IO (hGetContents, hSetBuffering, BufferMode(LineBuffering)
 import System.Timeout (timeout)
 import System.Random (getStdGen, next)
 
+import Library.MusicLibrary (getLibrary, findTrack)
+import SafeIO (ReadFileIO(..), ProcIO(..), proc
+              ,WriteFileIO(..), Handle, ProcessHandle, hClose)
+import Mpg.MpgCommands (frames, MpgCommand(Load))
+import Mpg.MpgMessages (PlaybackTime(PT), seconds, PlaybackState(Ended))
+import Ham.HamState (HamState(..))
+import CmdHandler (handleCmds)
+import UDPDiscovery (makeDiscoverable)
+import TCPConnector (acceptRemotes)
+import MsgHandler (handleMsgs, handleErrs)
 
-main :: IO ()
-main = do
+execService :: IO ()
+execService = do
     dir <- getArgs >>= parseArgs
     putStrLn $ "Initializing Library .. Collecting Songs in " ++ dir
     library <- getLibrary dir
@@ -102,7 +100,7 @@ setupGain = doesFileExist f >>= \exists ->
           
           where f = ".gain"
         
-parseArgs :: ReadFileIO m => [String] -> m FilePath
+parseArgs :: (ReadFileIO m, MonadFail m) => [String] -> m FilePath
 parseArgs ("-c":_) = getCurrentDirectory
 parseArgs (f@(c:cs):fs) | c == '/'  = doesDirectoryExist f >>=
                                      \b -> if b then return f else parseArgs fs
@@ -114,7 +112,7 @@ parseArgs (f@(c:cs):fs) | c == '/'  = doesDirectoryExist f >>=
                                                      else parseArgs fs
 parseArgs _        = fail "No directory found"
 
-startPlayer :: ProcIO h m => FilePath -> 
+startPlayer :: (ProcIO h m, MonadFail m) => FilePath -> 
                              m (Maybe h, Maybe h, Maybe h, ProcessHandle)
 startPlayer fp = findMPG321 >>= \m -> 
                case m of 

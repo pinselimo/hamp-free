@@ -9,19 +9,18 @@ It is poorly maintained.
 
 ## Installation
 
-Given there is an instance of mpg321 or mpg123 installed on your system, setup is straight forward.
+Given there is an instance of mpg321 or mpg123 installed on your system, setup is even more straight forward now with Stack!
 
 Run:
 
 ~~~bash
-$ cabal v2-configure
-$ cabal v2-build
+$ stack build
 ~~~
 
 To then start HamP-Free just run:
 
 ~~~bash
-$ cabal v2-run HamP-Free -- [args]
+$ stack run -- [args]
 ~~~
 
 The only argument taken is the filepath to the music library: \
@@ -41,5 +40,5 @@ Give an example
 
 ## Remote control
 
-The accompanying Android app will be released in the near future,
-together with its Java library to handle the communication with HamP-Free.
+The Java-Library containing everything to communicate with this app is [sharedham](https://github.com/pinselimo/sharedham).
+
