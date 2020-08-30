@@ -23,26 +23,35 @@ import Control.Exception (finally)
 import Control.Monad (forever, forM, liftM)
 import Control.Concurrent (threadDelay)
 import Network.Socket hiding (listen)
-import Network.BSD (hostAddress, getHostByName)
+--import Network.BSD (hostAddress, getHostByName)
 import System.Timeout (timeout)
+import Foreign.C.String (newCString, peekCString)
+import Foreign.Marshal.Alloc (callocBytes, free)
+import Foreign.Storable (sizeOf)
 
 makeDiscoverable :: PortNumber -> (String -> Bool) -> String -> IO ()
 makeDiscoverable port isKey response = do
     
     sock  <- socket AF_INET Datagram defaultProtocol
-    bcast <- getHostByName broadcast
+    addr:_ <- getAddrInfo (Nothing) (Just broadcast) (Nothing)
+    -- bcast <- getHostByName broadcast
     
-    bind sock (SockAddrInet port $ hostAddress bcast)
+    bind sock (addrAddress addr) -- hostAddress bcast)
     
     finally (putStrLn "Discoverable.." >> listen sock isKey response) $ close sock
 
 listen :: Socket -> (String -> Bool) -> String -> IO ()
 listen s isKey response = do
-     (dat, _, ip) <- recvFrom s 1024
+     let recvSize = 1024
+     sendPtr <- newCString response
+     recvPtr <- callocBytes recvSize
+     (_len, ip) <- recvBufFrom s recvPtr recvSize
+     dat <- peekCString recvPtr
+     free recvPtr
      if isKey dat
-            then sendTo s response ip -- >> putStrLn ("Welcome " ++ show ip)
-                  >> listen s isKey response
-            else listen s isKey response
+            then sendBufTo s sendPtr (sizeOf sendPtr) ip -- >> putStrLn ("Welcome " ++ show ip)
+                  >> free sendPtr >> listen s isKey response
+            else free sendPtr >> listen s isKey response
     
 broadcast :: HostName
 broadcast = "0.0.0.0"

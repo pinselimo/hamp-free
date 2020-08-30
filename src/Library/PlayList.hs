@@ -37,9 +37,9 @@ next pl repeat
  
 
 shuffleNext :: PlayList -> Double -> Maybe FilePath
-shuffleNext pl d = takeTrack n pl
+shuffleNext pl d = takeTrack n $ getTracks pl
     where l = length $ getTracks pl
-          f = floor  $ l * d
+          f = floor  $ (fromIntegral l) * d
           n = if f >= l then l-1 else f
           takeTrack x (p:ps) | x == 0    = Just p
                              | otherwise = takeTrack (x-1) ps
